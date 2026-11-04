@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import secrets
+import socketserver
 import threading
 import time
 import webbrowser
@@ -26,10 +27,21 @@ from claude_swap.gui.api import GuiApi
 IDLE_EXIT_S = 150.0
 
 
+class _Server(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def server_bind(self) -> None:
+        # HTTPServer.server_bind resolves the host name (socket.getfqdn),
+        # which can hang for a long time on some macOS setups; nothing here
+        # uses server_name.
+        socketserver.TCPServer.server_bind(self)
+        self.server_name, self.server_port = self.server_address[:2]
+
+
 def serve(api: GuiApi, page: str) -> int:
     token = secrets.token_urlsafe(24)
     html = page.replace("__CSWAP_TOKEN__", token).encode("utf-8")
-    httpd: ThreadingHTTPServer
+    httpd: _Server
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args) -> None:  # silence per-request logging
@@ -78,8 +90,7 @@ def serve(api: GuiApi, page: str) -> int:
                 body = json.dumps({"error": str(e)}).encode("utf-8")
             self._send(200, body, "application/json")
 
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    httpd.daemon_threads = True
+    httpd = _Server(("127.0.0.1", 0), Handler)
     url = f"http://127.0.0.1:{httpd.server_address[1]}/?t={token}"
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     print(f"claude-swap GUI: {url}")

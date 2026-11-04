@@ -130,28 +130,19 @@ def test_server_requires_token_and_loopback_host(api: GuiApi, monkeypatch):
     ready = threading.Event()
     state: dict = {}
 
-    real_server = server.ThreadingHTTPServer
-
-    class CapturingServer(real_server):
-        def __init__(self, *a, **kw):
-            super().__init__(*a, **kw)
-            state["port"] = self.server_address[1]
-
     def fake_open(url):
-        state["token"] = url.split("t=", 1)[1]
+        state["url"] = url
         ready.set()
 
-    monkeypatch.setattr(server, "ThreadingHTTPServer", CapturingServer)
     monkeypatch.setattr(server.webbrowser, "open", fake_open)
     # Generous, so a loaded machine cannot idle it out mid-test; the test
     # ends it itself below.
     monkeypatch.setattr(server, "IDLE_EXIT_S", 30.0)
     thread = threading.Thread(target=server.serve, args=(api, "<p>__CSWAP_TOKEN__</p>"), daemon=True)
     thread.start()
-    # HTTPServer.server_bind does a reverse lookup (socket.getfqdn), which
-    # can stall for several seconds on macOS runners.
-    assert ready.wait(30)
-    port, token = state["port"], state["token"]
+    assert ready.wait(10)
+    port = int(state["url"].split(":")[2].split("/")[0])
+    token = state["url"].split("t=", 1)[1]
 
     def post(name, headers):
         conn = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
