@@ -148,7 +148,9 @@ def test_server_requires_token_and_loopback_host(api: GuiApi, monkeypatch):
     monkeypatch.setattr(server, "IDLE_EXIT_S", 30.0)
     thread = threading.Thread(target=server.serve, args=(api, "<p>__CSWAP_TOKEN__</p>"), daemon=True)
     thread.start()
-    assert ready.wait(5)
+    # HTTPServer.server_bind does a reverse lookup (socket.getfqdn), which
+    # can stall for several seconds on macOS runners.
+    assert ready.wait(30)
     port, token = state["port"], state["token"]
 
     def post(name, headers):

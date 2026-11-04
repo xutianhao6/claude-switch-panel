@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import pytest
 
@@ -116,12 +116,12 @@ def test_only_desktop_installs_count_as_desktop():
 
 
 def test_store_app_id_from_the_data_path():
-    assert desktop._store_app_id(Path(r"C:\U\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc")) == "Claude_pzs8sxrjxfjjc!Claude"
+    assert desktop._store_app_id(PureWindowsPath(r"C:\U\AppData\Local\Claude-Data\claude_pzs8sxrjxfjjc")) == "Claude_pzs8sxrjxfjjc!Claude"
     assert (
-        desktop._store_app_id(Path(r"C:\U\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude"))
+        desktop._store_app_id(PureWindowsPath(r"C:\U\AppData\Local\Packages\Claude_pzs8sxrjxfjjc\LocalCache\Roaming\Claude"))
         == "Claude_pzs8sxrjxfjjc!Claude"
     )
-    assert desktop._store_app_id(Path(r"C:\U\AppData\Roaming\Claude")) is None
+    assert desktop._store_app_id(PureWindowsPath(r"C:\U\AppData\Roaming\Claude")) is None
 
 
 @pytest.fixture
